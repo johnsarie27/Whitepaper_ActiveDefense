@@ -1,5 +1,5 @@
 ﻿
-$data = @() 
+<# $data = @()
 $hotfixes = Get-HotFix | Select-Object CSname,Description,HotFixID,InstalledOn,InstalledBy,Caption `
      | Sort-Object InstalledOn -Descending
 
@@ -13,6 +13,9 @@ $hotfixes | ForEach-Object {
     $ret | Add-Member -MemberType NoteProperty -Name "InstalledBy" -Value $_.InstalledBy
     $data += $ret
 }
-$data
+$data #>
 
 
+$properties = @('PSComputerName', 'Description', 'Caption', 'HotFixID', 'InstalledOn', 'InstalledBy')
+
+Get-HotFix | Select-Object -Property $properties
