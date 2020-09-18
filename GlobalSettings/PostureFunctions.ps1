@@ -70,7 +70,7 @@ function Set-ActiveDefenseGlobalSetting ([string] $key) {
     $settings = Get-Content -Path "\\$shareServer\Scripts\alpha\settings.json" | ConvertFrom-Json
 } #>
 
-function AddSHA256CMDFileHashToMasterList ([string] $path, [string] $algo, [string]$hash, [string] $os) {
+function Add-SHA256CMDFileHashToMasterList ([string] $path, [string] $algo, [string]$hash, [string] $os) {
     $importedCMDFileHash =@()
     if(!(Test-Path ([string]::Concat($settings.CmdFileHashLocation,$settings.CmdFileHashFileName)))){
         New-Item -Path $settings.CmdFileHashLocation -ItemType File -Name ($settings.CmdFileHashFileName)
@@ -112,7 +112,7 @@ function Remove-LastRunForMachineRegex ([regex] $regex) {
     }
 }
 
-function Get-RegistryandServiceValuesForMandatorySoftware([string]$vendor){
+function Get-RegistryandServiceValuesForMandatorySoftware ([string]$vendor) {
     $services = Get-service | Where-Object {$_.name -like "*$vendor*"}
     $listofInstalledSoftware = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* `
             | Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, URLInfoAbout, UninstallString, InstallLocation
@@ -167,90 +167,93 @@ function Get-SecurityServersAccountisinAdministratorsGroup ([string]$samaccountn
 }
 
 
-function Send-InstalledSubsystems {
-        [cmdletbinding()]
-        Param(
+<# function Send-InstalledSubsystems {
+    [cmdletbinding()]
+    Param(
         [parameter(ValueFromPipeline)]
         [ValidateSet('SendEmail','ReturnData')]
-        [string[]]$Action
-        )
-        $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
-        $outputfileName = "LinuxSubsystems"
-        $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
-        $data = @()
-        #Dynamically Building the mandatory Software list as all environments have different output
-        $buildOutputPaths |  ForEach-Object {
-            if($settings.OutputFileType -eq "csv"){
-                $temp = Import-Csv   $_.FullName
-                $data += $temp
-                }
-        }
-        if( $Action -eq "ReturnData" ) {
-            $data
-        }
-        elseif ( $Action -eq "SendEmail" ) {
-            $reportAttachement = [string]::Concat($settings.temporaryPathforReports,$outputfileName,"_$currentDate",".",$settings.OutputFileType)
-            if(!(Test-Path $settings.temporaryPathforReports)){
-                New-Item -ItemType directory -Path $settings.temporaryPathforReports
-                $data | Export-Csv $reportAttachement
+        [string[]] $Action
+    )
+    $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
+    $outputfileName = "LinuxSubsystems"
+    $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
+    $data = @()
+    #Dynamically Building the mandatory Software list as all environments have different output
+    $buildOutputPaths |  ForEach-Object {
+        if($settings.OutputFileType -eq "csv"){
+            $temp = Import-Csv   $_.FullName
+            $data += $temp
             }
-            else{$data | Export-Csv $reportAttachement}
-            $emailTo = "Security@lab.local"
-            $emailsubject = [string]::Concat($outputfileName, " for ", $currentDate)
+    }
+    if( $Action -eq "ReturnData" ) {
+        $data
+    }
+    elseif ( $Action -eq "SendEmail" ) {
+        $reportAttachement = [string]::Concat($settings.temporaryPathforReports,$outputfileName,"_$currentDate",".",$settings.OutputFileType)
+        if(!(Test-Path $settings.temporaryPathforReports)){
+            New-Item -ItemType directory -Path $settings.temporaryPathforReports
+            $data | Export-Csv $reportAttachement
+        }
+        else{$data | Export-Csv $reportAttachement}
+        $emailTo = "Security@lab.local"
+        $emailsubject = [string]::Concat($outputfileName, " for ", $currentDate)
 
-            $emailParams = @{
-                Body        = "enter the content of the email body in this variable"
-                SmtpServer  = $settings.smtpserveraddress
-                From        = $settings.smtpsenderaddress
-                To          = $emailTo
-                Subject     = $emailsubject
-                Attachments = $reportAttachement
-            }
-            Send-MailMessage @emailParams
+        $emailParams = @{
+            Body        = "enter the content of the email body in this variable"
+            SmtpServer  = $settings.smtpserveraddress
+            From        = $settings.smtpsenderaddress
+            To          = $emailTo
+            Subject     = $emailsubject
+            Attachments = $reportAttachement
         }
-}
+        Send-MailMessage @emailParams
+    }
+} #>
+
 function Send-InsecureServicePermissions {
-        [CmdletBinding()]
-        Param(
+    [CmdletBinding()]
+    Param(
         [parameter(ValueFromPipeline)]
         [ValidateSet('SendEmail','ReturnData')]
-        [string[]]$Action
-        )
-        $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
-        $outputfileName = "InsecurePermissions2"
-        $currentDate = [datetime]::Today.ToString('MM-dd-yyyy')
-        $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
-        $data = @()
-        $buildOutputPaths |  ForEach-Object {
-            if($settings.OutputFileType -eq "csv"){
-                $temp = Import-Csv   $_.FullName
-                $data += $temp
-                }
+        [string[]] $Action
+    )
+    $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
+    $outputfileName = "InsecurePermissions2"
+    $currentDate = [datetime]::Today.ToString('MM-dd-yyyy')
+    $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
+    $data = @()
+    $buildOutputPaths |  ForEach-Object {
+        if ( $settings.OutputFileType -eq "csv" ) {
+            $temp = Import-Csv   $_.FullName
+            $data += $temp
         }
-        if($Action -eq "ReturnData"){  $data}
-        elseif($Action -eq "SendEmail"){
-            $reportAttachement = [string]::Concat($settings.temporaryPathforReports,$outputfileName,"_$currentDate",".",$settings.OutputFileType)
-            if(!(Test-Path $settings.temporaryPathforReports)){
-                New-Item -ItemType directory -Path $settings.temporaryPathforReports
-                $data | Export-Csv $reportAttachement
-            }
-            else{$data | Export-Csv $reportAttachement}
-            $emailTo = "Security@lab.local"
-            $emailsubject = [string]::Concat($outputfileName, " for ", $currentDate)
+    }
+    if ( $Action -eq "ReturnData" ) {
+        $data
+    }
+    elseif ( $Action -eq "SendEmail" ) {
+        $reportAttachement = [string]::Concat($settings.temporaryPathforReports,$outputfileName,"_$currentDate",".",$settings.OutputFileType)
+        if(!(Test-Path $settings.temporaryPathforReports)){
+            New-Item -ItemType directory -Path $settings.temporaryPathforReports
+            $data | Export-Csv $reportAttachement
+        }
+        else{$data | Export-Csv $reportAttachement}
+        $emailTo = "Security@lab.local"
+        $emailsubject = [string]::Concat($outputfileName, " for ", $currentDate)
 
-            $emailParams = @{
-                Body        = "enter the content of the email body in this variable"
-                SmtpServer  = $settings.smtpserveraddress
-                From        = $settings.smtpsenderaddress
-                To          = $emailTo
-                Subject     = $emailsubject
-                Attachments = $reportAttachement
-            }
-            Send-MailMessage @emailParams
+        $emailParams = @{
+            Body        = "enter the content of the email body in this variable"
+            SmtpServer  = $settings.smtpserveraddress
+            From        = $settings.smtpsenderaddress
+            To          = $emailTo
+            Subject     = $emailsubject
+            Attachments = $reportAttachement
         }
+        Send-MailMessage @emailParams
+    }
 }
 
-function Search-InstalledSoftware([string] $searchstring){
+function Search-InstalledSoftware ([string] $searchstring) {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "InstalledSoftware"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
@@ -266,7 +269,7 @@ function Search-InstalledSoftware([string] $searchstring){
 }
 
 
-function Search-InstalledFeatures([string] $searchstring){
+function Search-InstalledFeatures ([string] $searchstring) {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "getinstalledfeatures"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
@@ -281,7 +284,7 @@ function Search-InstalledFeatures([string] $searchstring){
     $return
 }
 
-function Get-InstalledFeatures{
+<# function Get-InstalledFeatures {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "getinstalledfeatures"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
@@ -294,11 +297,11 @@ function Get-InstalledFeatures{
     }
     $return = $data | Group-Object Displayname | Where-Object {$_.name -ne ""} |  Sort-Object Name | Select-Object Name, Count
     $return
-}
+} #>
 
 
 
-function Search-AllReports([string] $searchstring){
+function Search-AllReports ([string] $searchstring) {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "InstalledSoftware"
     $buildOutputPaths =  (Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*") ) -Recurse)
@@ -313,7 +316,7 @@ function Search-AllReports([string] $searchstring){
     $return
 }
 
-function Search-ChromeExtensions{
+function Search-ChromeExtensions {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "ChromeExtensions"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
@@ -327,7 +330,7 @@ function Search-ChromeExtensions{
     $data
 }
 
-function Search-FirefoxExtensions{
+function Search-FirefoxExtensions {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "FireFoxExtensions"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))
@@ -341,7 +344,7 @@ function Search-FirefoxExtensions{
     $data
 }
 
-function Search-MandatorySoftwareStatus{
+function Search-MandatorySoftwareStatus {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
     $outputfileName = "mandatorySoftware"
     $buildOutputPaths =  Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*\",$outputfileName, ".",$settings.OutputFileType))

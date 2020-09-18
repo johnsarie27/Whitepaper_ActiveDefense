@@ -8,15 +8,12 @@ if ( !(Test-Path $outputFolder) ) {
 }
 
 $lastruntimeFile = Join-Path -Path $outputFolder -ChildPath $settings.LastRunTimeFileName
-
 if ( !(Test-path $lastruntimeFile) ) {
     New-Item -Path $lastruntimeFile -ItemType file -Force
 }
 else {
-    $lastWriteTime = Get-ChildItem $lastruntimeFile | Select-Object LastWriteTime
-
-    if ( $lastWriteTime.lastwritetime -lt (Get-Date).AddHours(-24) ) {
-         New-Item -Path $lastruntimeFile -ItemType file -Force
+    if ( (Get-Item $lastruntimeFile).LastWriteTime -lt (Get-Date).AddHours(-24) ) {
+        New-Item -Path $lastruntimeFile -ItemType file -Force
     }
     else {
         exit
@@ -37,7 +34,7 @@ $vars = @{
     arpa                                  = "Get-arp-a"
     etchosts                              = "Get-etcHosts"
     localgroupMembership                  = "Get-LocalGroupMembership"
-    GetinstalledFeatures                  = "Get-installedFeatures"
+    GetinstalledFeatures                  = "Get-InstalledFeatures"
     netBios                               = "Get-NetBIOS"
     firefoxExtensions                     = "Get-FireFoxExtensions_T1176"
     chromexExtensions                     = "Get-ChromeExtensions_T1176"
@@ -47,7 +44,7 @@ $vars = @{
     ComputerSummary                       = "Get-ComputerSummary"
     InsecurePermissions                   = "Get-InsecurePermissions_V2"
     RDPUSers                              = "Get-RDPUsers"
-    credentialGuardStatus                 = "Get-credentialGuardStatus"
+    credentialGuardStatus                 = "Get-CredentialGuardStatus"
     SecuritySupportProvider_T1101         = "Get-SecuritySupportProvider_T1101"
     GetScheduledTasks                     = "Get-ScheduledTasks"
     mandatorySoftware                     = "Get-MandatorySoftwareStatus"
@@ -55,6 +52,10 @@ $vars = @{
 }
 
 $reportParams = @{ FileType = $settings.OutputFileType; OutputFolder = $outputFolder }
+
+foreach ( $file in (Get-ChildItem -Path "$PSScriptRoot\Modules" -Filter *.ps1) ) {
+    New-Report -FileName $file.Name.Split('-')[1] -ScriptVariable $file.FullName @reportParams
+}
 
 foreach ( $v in $vars.GetEnumerator() ) {
     $value = Join-Path -Path $settings.ScriptsFolder -ChildPath ("Modules\{0}.ps1" -f $v.Value)
