@@ -303,7 +303,7 @@ function Search-InstalledFeatures ([string] $searchstring) {
 
 function Search-AllReports ([string] $searchstring) {
     $settings =  Get-Content "\\lab-script-01\Scripts\GlobalSettings\settings.json" | ConvertFrom-Json
-    $outputfileName = "InstalledSoftware"
+    #$outputfileName = "InstalledSoftware"
     $buildOutputPaths =  (Get-ChildItem ([string]::Concat($settings.OutputFolder,"\*") ) -Recurse)
     $data = @()
     $buildOutputPaths |  ForEach-Object {
